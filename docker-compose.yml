@@ -1,0 +1,64 @@
+services:
+  db:
+    image: postgres:alpine
+    container_name: sql-injection-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: injection_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal-net
+
+  v-app:
+    build:
+      context: ./v-app
+      dockerfile: Dockerfile
+    container_name: sql-injection-v-app
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: injection_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal-net
+
+  s-app:
+    build:
+      context: ./s-app
+      dockerfile: Dockerfile
+    container_name: sql-injection-s-app
+    ports:
+      - "3001:3001"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: injection_db
+      DB_USER: app_readonly
+      DB_PASSWORD: readonly_pass
+      DB_USER_FULL: app_full
+      DB_PASSWORD_FULL: full_pass
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal-net
+
+networks:
+  internal-net:
+    driver: bridge
+

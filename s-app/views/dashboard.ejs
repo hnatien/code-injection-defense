@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Secure App</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="security-banner">SECURE VERSION</div>
+    
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>Dashboard</h1>
+            <div class="user-info">
+                Logged in as: <strong><%= user.username %></strong> (<%= user.role %>)
+            </div>
+        </div>
+        
+        <div class="search-section">
+            <h2>Search Users</h2>
+            <form method="GET" action="/search" class="search-form">
+                <input 
+                    type="text" 
+                    name="q" 
+                    class="search-input" 
+                    placeholder="Enter username to search..."
+                    value=""
+                >
+                <button type="submit" class="search-btn">Search</button>
+            </form>
+        </div>
+        
+        <div class="text-center">
+            <a href="/" class="logout-link">Logout</a>
+        </div>
+    </div>
+</body>
+</html>
+

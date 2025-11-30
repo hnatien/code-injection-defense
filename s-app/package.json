@@ -1,0 +1,17 @@
+{
+  "name": "s-app",
+  "version": "1.0.0",
+  "description": "Secure Application with SQL Injection Defense",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ejs": "^3.1.9",
+    "pg": "^8.11.3",
+    "body-parser": "^1.20.2",
+    "cookie-parser": "^1.4.6"
+  }
+}
+

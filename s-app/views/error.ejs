@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - Secure App</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="security-banner">SECURE VERSION</div>
+    
+    <div class="container">
+        <div class="form-container">
+            <h1>System Error</h1>
+            <div class="error">
+                <%= message || 'An error occurred. Please try again.' %>
+            </div>
+            <div class="text-center mt-24">
+                <a href="/" class="btn btn-primary">Return to Home</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

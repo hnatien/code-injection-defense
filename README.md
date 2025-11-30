@@ -2,13 +2,13 @@
 
 A Proof of Concept (PoC) project demonstrating SQL Injection vulnerabilities and Defense-in-Depth strategies. This monorepo contains two Node.js applications: a vulnerable version and a secure version, both connecting to a PostgreSQL database.
 
-## 🎯 Project Overview
+## Project Overview
 
 This project demonstrates:
 - **SQL Injection Vulnerabilities**: Auth bypass and data exfiltration via UNION attacks
 - **Defense-in-Depth Strategies**: Input validation, parameterized queries, Principle of Least Privilege (PoLP), and security logging
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 sql-injection-defense/
@@ -28,7 +28,7 @@ sql-injection-defense/
 └── README.md
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -59,7 +59,7 @@ sql-injection-defense/
    ```
    This removes volumes and resets the database to initial empty state.
 
-## 🗄️ Database Setup
+## Database Setup
 
 The database is automatically initialized with:
 
@@ -79,7 +79,7 @@ The database is automatically initialized with:
 - `app_readonly`: SELECT-only permissions (used by secure app)
 - `app_full`: Full CRUD permissions (used for registration in secure app)
 
-## 🔴 Vulnerable Application (V-App)
+## Vulnerable Application (V-App)
 
 **Port**: 3000  
 **Banner**: Black "VULNERABLE VERSION" (monochrome design)
@@ -122,7 +122,7 @@ Sensitive Note: 'test', role='admin'--
 ```
 This can be used to escalate privileges during registration (v-app only).
 
-## 🟢 Secure Application (S-App)
+## Secure Application (S-App)
 
 **Port**: 3001  
 **Banner**: Black "SECURE VERSION" (monochrome design)
@@ -160,7 +160,7 @@ This can be used to escalate privileges during registration (v-app only).
 - No stack traces or detailed errors exposed to users
 - Generic "System Error" messages prevent information leakage
 
-## 🎨 Design System
+## Design System
 
 Both applications implement a **Minimalist & Swiss Style** design:
 
@@ -170,7 +170,7 @@ Both applications implement a **Minimalist & Swiss Style** design:
 - **Components**: Sharp corners, flat design, subtle hover effects
 - **No shadows, gradients, or excessive border-radius**
 
-## 🔧 Technology Stack
+## Technology Stack
 
 - **Runtime**: Node.js 18 (Alpine)
 - **Framework**: Express.js
@@ -179,7 +179,7 @@ Both applications implement a **Minimalist & Swiss Style** design:
 - **Database Client**: `pg` (node-postgres) - No ORM
 - **Containerization**: Docker & Docker Compose
 
-## 📝 Application Flow
+## Application Flow
 
 1. **Landing Page**: User can Login or Register
 2. **Registration**: User can create account with username, password, role, and **sensitive_note** field
@@ -187,7 +187,7 @@ Both applications implement a **Minimalist & Swiss Style** design:
 4. **Search**: Query users by username (vulnerable to UNION attacks in v-app)
 5. **Login**: Authentication (vulnerable to auth bypass in v-app)
 
-## 🧪 Testing Scenarios
+## Testing Scenarios
 
 ### Vulnerable App Testing
 
@@ -219,13 +219,13 @@ Both applications implement a **Minimalist & Swiss Style** design:
    - View console output or `security.log` file
    - Should see `[ALERT]` entries for blocked attempts
 
-## ⚠️ Security Notice
+## Security Notice
 
 **This is an educational PoC project. DO NOT deploy to production environments.**
 
 The vulnerable application intentionally contains security flaws for demonstration purposes. The secure application implements defense mechanisms but may not be production-ready without additional security measures (e.g., password hashing, rate limiting, CSRF protection, etc.).
 
-## 📚 Learning Objectives
+## Learning Objectives
 
 After exploring this project, you should understand:
 
@@ -237,14 +237,10 @@ After exploring this project, you should understand:
 6. Principle of Least Privilege in database design
 7. Security logging and monitoring
 
-## 🤝 Contributing
+## Contributing
 
 This is a university project for educational purposes. Feel free to extend it with additional vulnerabilities and defenses.
 
-## 📄 License
+## License
 
 Educational use only.
-
-#   c o d e - i n j e c t i o n - d e f e n s e  
- #   c o d e - i n j e c t i o n - d e f e n s e  
- 
