@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const { Pool } = require('pg');
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const port = 3001;
@@ -129,9 +130,12 @@ app.post('/register', validateInput, async (req, res) => {
     
     try {
         // DEFENSE 2: Parameterized query
+        // DEFENSE 7: Password hashing with bcrypt
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
         const note = sensitive_note || '';
         const query = `INSERT INTO users (username, password, sensitive_note) VALUES ($1, $2, $3)`;
-        await fullPool.query(query, [username, password, note]);
+        await fullPool.query(query, [username, hashedPassword, note]);
         res.redirect('/?registered=true');
     } catch (error) {
         // DEFENSE 3: Generic error message (no stack trace)
@@ -145,15 +149,34 @@ app.post('/login', validateInput, async (req, res) => {
     
     try {
         // DEFENSE 2: Parameterized query
-        const query = `SELECT * FROM users WHERE username = $1 AND password = $2`;
-        const result = await readonlyPool.query(query, [username, password]);
+        // DEFENSE 7: Password verification with bcrypt
+        const query = `SELECT * FROM users WHERE username = $1`;
+        const result = await readonlyPool.query(query, [username]);
         
         if (result.rows.length > 0) {
             const user = result.rows[0];
-            const sessionId = generateSessionId();
-            sessions[sessionId] = user;
-            res.cookie('sessionId', sessionId);
-            res.redirect('/dashboard');
+            let passwordMatch = false;
+            
+            // Check if password is hashed (starts with bcrypt hash prefix)
+            // This allows backward compatibility with users registered in v-app (plain text)
+            // but ensures users registered in s-app are protected (hashed)
+            if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$') || user.password.startsWith('$2y$')) {
+                // Password is hashed (registered in s-app) - use bcrypt
+                passwordMatch = await bcrypt.compare(password, user.password);
+            } else {
+                // Password is plain text (registered in v-app) - direct comparison
+                // Note: This is for demo purposes to show the difference
+                passwordMatch = (user.password === password);
+            }
+            
+            if (passwordMatch) {
+                const sessionId = generateSessionId();
+                sessions[sessionId] = user;
+                res.cookie('sessionId', sessionId);
+                res.redirect('/dashboard');
+            } else {
+                res.render('login', { error: 'Invalid credentials' });
+            }
         } else {
             res.render('login', { error: 'Invalid credentials' });
         }

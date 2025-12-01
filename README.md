@@ -79,16 +79,23 @@ code-injection-defense/
 
 1. ✅ **Input Validation** - Blocks SQL injection patterns
 2. ✅ **Parameterized Queries** - All queries use `$1, $2, ...` placeholders
-3. ✅ **Least Privilege** - Separate DB roles (`app_readonly`, `app_full`)
-4. ✅ **Security Logging** - Suspicious attempts logged to console/file
-5. ✅ **Generic Errors** - No stack traces exposed
-6. ✅ **Data Minimization** - Search only returns safe fields
+3. ✅ **Password Hashing** - Passwords hashed with bcrypt (salt rounds: 10). Users registered in secure app are protected; users from vulnerable app remain vulnerable (plain text)
+4. ✅ **Least Privilege** - Separate DB roles (`app_readonly`, `app_full`)
+5. ✅ **Security Logging** - Suspicious attempts logged to console/file
+6. ✅ **Generic Errors** - No stack traces exposed
+7. ✅ **Data Minimization** - Search only returns safe fields
 
 ### Testing
 
-1. Try the same attacks at http://localhost:3001
-2. All attacks blocked with: `"System Error: Invalid input detected."`
-3. Check console for `[ALERT]` security logs
+1. **Register a new user** at http://localhost:3001
+   - Password will be hashed before storage (check Prisma Studio to see hashed password starting with `$2b$`)
+2. **Login with correct password** - Should work normally
+3. **Compare with v-app**: 
+   - Register at v-app → password stored as plain text (vulnerable)
+   - Register at s-app → password stored as hash (secure)
+   - Users from v-app can still login to s-app (backward compatibility)
+4. **Try SQL injection attacks** - All blocked with: `"System Error: Invalid input detected."`
+5. **Check console** for `[ALERT]` security logs
 
 ## 🗄️ Database
 
