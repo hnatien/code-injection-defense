@@ -93,6 +93,36 @@ app.get('/dashboard', requireAuth, (req, res) => {
     res.render('dashboard', { user: req.user });
 });
 
+app.get('/my-note', requireAuth, async (req, res) => {
+    try {
+        // VULNERABLE: String concatenation - but using session user.id for basic security
+        const userId = req.user.id;
+        const sqlQuery = `SELECT sensitive_note FROM users WHERE id = ${userId}`;
+        const result = await pool.query(sqlQuery);
+        
+        if (result.rows.length === 0) {
+            return res.render('my-note', { 
+                user: req.user, 
+                sensitive_note: null,
+                error: 'User not found.' 
+            });
+        }
+        
+        res.render('my-note', { 
+            user: req.user, 
+            sensitive_note: result.rows[0].sensitive_note,
+            error: null
+        });
+    } catch (error) {
+        // VULNERABLE: Display full error stack
+        res.render('my-note', { 
+            user: req.user, 
+            sensitive_note: null,
+            error: error.stack || error.message 
+        });
+    }
+});
+
 app.get('/search', requireAuth, async (req, res) => {
     const query = req.query.q || '';
     

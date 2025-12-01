@@ -305,6 +305,33 @@ a:hover {
     color: var(--text-secondary);
 }
 
+/* Note Section */
+.note-section {
+    margin-bottom: 48px;
+    padding: 32px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+}
+
+.note-container {
+    margin-bottom: 48px;
+}
+
+.note-content {
+    padding: 32px;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--text-primary);
+}
+
+.note-content p {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
 /* Logout */
 .logout-link {
     display: inline-block;

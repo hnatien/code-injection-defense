@@ -125,13 +125,14 @@ app.get('/register', (req, res) => {
 });
 
 app.post('/register', validateInput, async (req, res) => {
-    const { username, password, role, sensitive_note } = req.body;
+    const { username, password, sensitive_note } = req.body;
     
     try {
         // DEFENSE 2: Parameterized query
+        // SECURITY: Always set role to 'user' - prevent privilege escalation
         const note = sensitive_note || '';
         const query = `INSERT INTO users (username, password, role, sensitive_note) VALUES ($1, $2, $3, $4)`;
-        await fullPool.query(query, [username, password, role || 'user', note]);
+        await fullPool.query(query, [username, password, 'user', note]);
         res.redirect('/?registered=true');
     } catch (error) {
         // DEFENSE 3: Generic error message (no stack trace)
@@ -166,6 +167,37 @@ app.post('/login', validateInput, async (req, res) => {
 
 app.get('/dashboard', requireAuth, (req, res) => {
     res.render('dashboard', { user: req.user });
+});
+
+app.get('/my-note', requireAuth, async (req, res) => {
+    try {
+        // DEFENSE 2: Parameterized query
+        // Only get sensitive_note for the currently logged-in user
+        const sqlQuery = `SELECT sensitive_note FROM users WHERE id = $1`;
+        const result = await readonlyPool.query(sqlQuery, [req.user.id]);
+        
+        if (result.rows.length === 0) {
+            return res.render('my-note', { 
+                user: req.user, 
+                sensitive_note: null,
+                error: 'System Error: User not found.' 
+            });
+        }
+        
+        res.render('my-note', { 
+            user: req.user, 
+            sensitive_note: result.rows[0].sensitive_note,
+            error: null
+        });
+    } catch (error) {
+        // DEFENSE 3: Generic error message
+        console.error('My note error:', error);
+        res.render('my-note', { 
+            user: req.user, 
+            sensitive_note: null,
+            error: 'System Error: Failed to retrieve note.' 
+        });
+    }
 });
 
 app.get('/search', requireAuth, validateInput, async (req, res) => {
