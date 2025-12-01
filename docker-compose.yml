@@ -58,11 +58,15 @@ services:
     networks:
       - internal-net
 
-  adminer:
-    image: adminer:latest
-    container_name: sql-injection-adminer
+  prisma-studio:
+    build:
+      context: ./prisma
+      dockerfile: Dockerfile
+    container_name: sql-injection-prisma-studio
     ports:
-      - "8080:8080"
+      - "5555:5555"
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/injection_db"
     depends_on:
       db:
         condition: service_healthy

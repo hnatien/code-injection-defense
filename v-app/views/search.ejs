@@ -14,7 +14,7 @@
             <h1>Search Results</h1>
             <div class="header-actions">
                 <div class="user-info">
-                    Logged in as: <strong><%= user.username %></strong> (<%= user.role %>)
+                    Logged in as: <strong><%= user.username %></strong>
                 </div>
                 <a href="/profile" class="profile-link">User Profile</a>
             </div>
@@ -43,7 +43,6 @@
                     <tr>
                         <th>ID</th>
                         <th>Username</th>
-                        <th>Role</th>
                         <th>Sensitive Note</th>
                     </tr>
                 </thead>
@@ -52,7 +51,6 @@
                         <tr>
                             <td><%= user.id %></td>
                             <td><%= user.username %></td>
-                            <td><%= user.role %></td>
                             <td><%= user.sensitive_note %></td>
                         </tr>
                     <% }); %>

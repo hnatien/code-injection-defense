@@ -1,0 +1,13 @@
+{
+  "name": "prisma-studio",
+  "version": "1.0.0",
+  "description": "Prisma Studio for database viewing",
+  "scripts": {
+    "studio": "prisma studio --hostname 0.0.0.0 --port 5555"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.1",
+    "prisma": "^5.7.1"
+  }
+}
+

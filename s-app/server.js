@@ -129,10 +129,9 @@ app.post('/register', validateInput, async (req, res) => {
     
     try {
         // DEFENSE 2: Parameterized query
-        // SECURITY: Always set role to 'user' - prevent privilege escalation
         const note = sensitive_note || '';
-        const query = `INSERT INTO users (username, password, role, sensitive_note) VALUES ($1, $2, $3, $4)`;
-        await fullPool.query(query, [username, password, 'user', note]);
+        const query = `INSERT INTO users (username, password, sensitive_note) VALUES ($1, $2, $3)`;
+        await fullPool.query(query, [username, password, note]);
         res.redirect('/?registered=true');
     } catch (error) {
         // DEFENSE 3: Generic error message (no stack trace)
@@ -173,7 +172,7 @@ app.get('/profile', requireAuth, async (req, res) => {
     try {
         // DEFENSE 2: Parameterized query
         // Get user profile including sensitive_note for the currently logged-in user
-        const sqlQuery = `SELECT username, role, sensitive_note FROM users WHERE id = $1`;
+        const sqlQuery = `SELECT username, sensitive_note FROM users WHERE id = $1`;
         const result = await readonlyPool.query(sqlQuery, [req.user.id]);
         
         if (result.rows.length === 0) {
@@ -216,7 +215,7 @@ app.get('/search', requireAuth, validateInput, async (req, res) => {
     try {
         // DEFENSE 2: Parameterized query
         // Only select safe fields (exclude password and sensitive_note)
-        const sqlQuery = `SELECT id, username, role FROM users WHERE username LIKE $1`;
+        const sqlQuery = `SELECT id, username FROM users WHERE username LIKE $1`;
         const result = await readonlyPool.query(sqlQuery, [`%${query}%`]);
         
         res.render('search', { 

@@ -52,12 +52,12 @@ app.get('/register', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-    const { username, password, role, sensitive_note } = req.body;
+    const { username, password, sensitive_note } = req.body;
     
     try {
         // VULNERABLE: String concatenation
         const note = sensitive_note || '';
-        const query = `INSERT INTO users (username, password, role, sensitive_note) VALUES ('${username}', '${password}', '${role || 'user'}', '${note}')`;
+        const query = `INSERT INTO users (username, password, sensitive_note) VALUES ('${username}', '${password}', '${note}')`;
         await pool.query(query);
         res.redirect('/?registered=true');
     } catch (error) {
@@ -97,7 +97,7 @@ app.get('/profile', requireAuth, async (req, res) => {
     try {
         // VULNERABLE: String concatenation - but using session user.id for basic security
         const userId = req.user.id;
-        const sqlQuery = `SELECT username, role, sensitive_note FROM users WHERE id = ${userId}`;
+        const sqlQuery = `SELECT username, sensitive_note FROM users WHERE id = ${userId}`;
         const result = await pool.query(sqlQuery);
         
         if (result.rows.length === 0) {
