@@ -5,7 +5,7 @@ A Proof of Concept demonstrating SQL Injection vulnerabilities and Defense-in-De
 ## 🎯 What This Demonstrates
 
 - **SQL Injection Vulnerabilities**: Auth bypass, data exfiltration via UNION attacks
-- **Defense-in-Depth**: Input validation, parameterized queries, least privilege, security logging
+- **Defense-in-Depth**: Input validation, parameterized queries, password hashing, secure sessions, least privilege, security logging
 - **Real-world Comparison**: Side-by-side vulnerable vs. secure implementations
 
 ## 🚀 Quick Start
@@ -80,10 +80,11 @@ code-injection-defense/
 1. ✅ **Input Validation** - Blocks SQL injection patterns
 2. ✅ **Parameterized Queries** - All queries use `$1, $2, ...` placeholders
 3. ✅ **Password Hashing** - Passwords hashed with bcrypt (salt rounds: 10). Users registered in secure app are protected; users from vulnerable app remain vulnerable (plain text)
-4. ✅ **Least Privilege** - Separate DB roles (`app_readonly`, `app_full`)
-5. ✅ **Security Logging** - Suspicious attempts logged to console/file
-6. ✅ **Generic Errors** - No stack traces exposed
-7. ✅ **Data Minimization** - Search only returns safe fields
+4. ✅ **Secure Sessions** - Cryptographically secure session IDs, HttpOnly/Secure/SameSite cookie flags, session expiration
+5. ✅ **Least Privilege** - Separate DB roles (`app_readonly`, `app_full`)
+6. ✅ **Security Logging** - Suspicious attempts logged to console/file
+7. ✅ **Generic Errors** - No stack traces exposed
+8. ✅ **Data Minimization** - Search only returns safe fields
 
 ### Testing
 
