@@ -97,8 +97,13 @@ The database is automatically initialized with:
 3. **SQL Injection in Registration** (`POST /register`)
    - Uses string concatenation for all fields including `sensitive_note`
    - **Attack Example**: Can inject SQL through sensitive_note field: `'test', role='admin'--`
+   - **Privilege Escalation**: Users can select "admin" role during registration
 
-4. **Error Disclosure**
+4. **Privilege Escalation**
+   - Registration form allows users to select "admin" role
+   - No validation prevents users from self-assigning elevated privileges
+
+5. **Error Disclosure**
    - Full SQL error stack traces displayed to users
 
 ### Test Attacks
@@ -135,7 +140,8 @@ This can be used to escalate privileges during registration (v-app only).
   - SQL comments (`--`, `/*`, `*/`)
   - Statement terminators (`;`)
   - SQL keywords (`UNION`, `SELECT`, `INSERT`, etc.)
-- Applied to all input fields including registration form (username, password, role, sensitive_note)
+- Applied to all input fields including registration form (username, password, sensitive_note)
+- Note: Role field is removed from registration form to prevent privilege escalation
 
 #### Defense 2: Parameterized Queries
 - All database queries use parameterized statements:
@@ -147,6 +153,7 @@ This can be used to escalate privileges during registration (v-app only).
 - Application uses `app_readonly` role for SELECT operations
 - Separate `app_full` role only for INSERT operations (registration)
 - Database-level access control prevents unauthorized modifications
+- **Privilege Escalation Prevention**: Registration always sets role to 'user' - users cannot self-assign admin role
 
 #### Defense 4: Security Logging
 - Suspicious input attempts are logged with:
@@ -159,6 +166,11 @@ This can be used to escalate privileges during registration (v-app only).
 #### Defense 5: Generic Error Messages
 - No stack traces or detailed errors exposed to users
 - Generic "System Error" messages prevent information leakage
+
+#### Defense 6: Data Minimization in Search
+- Search results only display safe fields (id, username, role)
+- Password and sensitive_note are excluded from search results
+- Empty search queries return no results (prevents accidental data exposure)
 
 ## Design System
 
@@ -182,10 +194,13 @@ Both applications implement a **Minimalist & Swiss Style** design:
 ## Application Flow
 
 1. **Landing Page**: User can Login or Register
-2. **Registration**: User can create account with username, password, role, and **sensitive_note** field
-3. **Dashboard**: After login, user sees "Search Users" feature
+2. **Registration**: 
+   - V-App: User can create account with username, password, role (can choose admin), and **sensitive_note** field
+   - S-App: User can create account with username, password, and **sensitive_note** field (role is automatically set to 'user' - prevents privilege escalation)
+3. **Dashboard**: After login, user sees "Search Users" feature and "View My Sensitive Note" option
 4. **Search**: Query users by username (vulnerable to UNION attacks in v-app)
-5. **Login**: Authentication (vulnerable to auth bypass in v-app)
+5. **My Note**: View your own sensitive note (secure in s-app, vulnerable in v-app)
+6. **Login**: Authentication (vulnerable to auth bypass in v-app)
 
 ## Testing Scenarios
 
@@ -209,13 +224,27 @@ Both applications implement a **Minimalist & Swiss Style** design:
    - Register new user with sensitive_note: `'test', role='admin'--`
    - May allow privilege escalation (depending on query structure)
 
+5. **Test Privilege Escalation:**
+   - Register new user and select "admin" role from dropdown
+   - User will be created with admin privileges
+
 ### Secure App Testing
 
 1. **Test Input Validation:**
    - Try the same attacks as above
    - Should be blocked with "System Error: Invalid input detected."
 
-2. **Check Security Logs:**
+2. **Test Privilege Escalation Prevention:**
+   - Try to register with admin role
+   - Registration form does not include role field
+   - All new users are automatically assigned 'user' role
+
+3. **Test Data Protection:**
+   - Search for users - only safe fields (id, username, role) are displayed
+   - Password and sensitive_note are never shown in search results
+   - Use "View My Sensitive Note" to see only your own note
+
+4. **Check Security Logs:**
    - View console output or `security.log` file
    - Should see `[ALERT]` entries for blocked attempts
 
