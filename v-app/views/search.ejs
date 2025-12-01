@@ -12,8 +12,11 @@
     <div class="container">
         <div class="dashboard-header">
             <h1>Search Results</h1>
-            <div class="user-info">
-                Logged in as: <strong><%= user.username %></strong> (<%= user.role %>)
+            <div class="header-actions">
+                <div class="user-info">
+                    Logged in as: <strong><%= user.username %></strong> (<%= user.role %>)
+                </div>
+                <a href="/profile" class="profile-link">User Profile</a>
             </div>
         </div>
         

@@ -12,8 +12,11 @@
     <div class="container">
         <div class="dashboard-header">
             <h1>Dashboard</h1>
-            <div class="user-info">
-                Logged in as: <strong><%= user.username %></strong> (<%= user.role %>)
+            <div class="header-actions">
+                <div class="user-info">
+                    Logged in as: <strong><%= user.username %></strong> (<%= user.role %>)
+                </div>
+                <a href="/profile" class="profile-link">User Profile</a>
             </div>
         </div>
         
@@ -29,11 +32,6 @@
                 >
                 <button type="submit" class="search-btn">Search</button>
             </form>
-        </div>
-        
-        <div class="note-section">
-            <h2>My Sensitive Note</h2>
-            <a href="/my-note" class="btn btn-primary">View My Note</a>
         </div>
         
         <div class="text-center">

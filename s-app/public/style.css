@@ -169,10 +169,20 @@ textarea {
     padding: 48px 0;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
 }
 
 .dashboard-header h1 {
     margin-bottom: 8px;
+}
+
+.header-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
 }
 
 .user-info {
@@ -180,6 +190,21 @@ textarea {
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    text-align: right;
+}
+
+.profile-link {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+}
+
+.profile-link:hover {
+    background-color: var(--bg-secondary);
+    text-decoration: none;
 }
 
 /* Search Section */
@@ -305,16 +330,56 @@ a:hover {
     color: var(--text-secondary);
 }
 
-/* Note Section */
-.note-section {
+/* Profile */
+.profile-container {
+    margin-bottom: 48px;
+}
+
+.profile-section {
     margin-bottom: 48px;
     padding: 32px;
     border: 1px solid var(--border-color);
     background-color: var(--bg-primary);
 }
 
+.profile-section h2 {
+    margin-bottom: 24px;
+    font-size: 20px;
+}
+
+.profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.info-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    min-width: 120px;
+}
+
+.info-value {
+    color: var(--text-primary);
+    font-size: 16px;
+}
+
 .note-container {
-    margin-bottom: 48px;
+    margin-top: 24px;
 }
 
 .note-content {

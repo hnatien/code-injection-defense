@@ -169,33 +169,33 @@ app.get('/dashboard', requireAuth, (req, res) => {
     res.render('dashboard', { user: req.user });
 });
 
-app.get('/my-note', requireAuth, async (req, res) => {
+app.get('/profile', requireAuth, async (req, res) => {
     try {
         // DEFENSE 2: Parameterized query
-        // Only get sensitive_note for the currently logged-in user
-        const sqlQuery = `SELECT sensitive_note FROM users WHERE id = $1`;
+        // Get user profile including sensitive_note for the currently logged-in user
+        const sqlQuery = `SELECT username, role, sensitive_note FROM users WHERE id = $1`;
         const result = await readonlyPool.query(sqlQuery, [req.user.id]);
         
         if (result.rows.length === 0) {
-            return res.render('my-note', { 
+            return res.render('profile', { 
                 user: req.user, 
-                sensitive_note: null,
+                profile: null,
                 error: 'System Error: User not found.' 
             });
         }
         
-        res.render('my-note', { 
+        res.render('profile', { 
             user: req.user, 
-            sensitive_note: result.rows[0].sensitive_note,
+            profile: result.rows[0],
             error: null
         });
     } catch (error) {
         // DEFENSE 3: Generic error message
-        console.error('My note error:', error);
-        res.render('my-note', { 
+        console.error('Profile error:', error);
+        res.render('profile', { 
             user: req.user, 
-            sensitive_note: null,
-            error: 'System Error: Failed to retrieve note.' 
+            profile: null,
+            error: 'System Error: Failed to retrieve profile.' 
         });
     }
 });
