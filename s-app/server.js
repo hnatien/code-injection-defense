@@ -5,6 +5,7 @@ const { Pool } = require('pg');
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 
 const app = express();
 const port = 3001;
@@ -36,11 +37,27 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Session storage (in-memory, for demo purposes)
+// Structure: { sessionId: { user: {...}, expiresAt: timestamp } }
 const sessions = {};
 
-// Helper function to generate session ID
+// Session expiration time (24 hours in milliseconds)
+const SESSION_EXPIRY = 24 * 60 * 60 * 1000;
+
+// Cleanup expired sessions periodically
+setInterval(() => {
+    const now = Date.now();
+    for (const [sessionId, sessionData] of Object.entries(sessions)) {
+        if (sessionData.expiresAt && sessionData.expiresAt < now) {
+            delete sessions[sessionId];
+        }
+    }
+}, 60 * 60 * 1000); // Run cleanup every hour
+
+// Helper function to generate secure session ID using crypto
 function generateSessionId() {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    // Generate 32 random bytes and convert to hex string (64 characters)
+    // This is cryptographically secure and unpredictable
+    return crypto.randomBytes(32).toString('hex');
 }
 
 // DEFENSE 1: Input Validation Middleware
@@ -109,7 +126,18 @@ function logSuspiciousActivity(req, param, value) {
 function requireAuth(req, res, next) {
     const sessionId = req.cookies?.sessionId || req.query.sessionId;
     if (sessionId && sessions[sessionId]) {
-        req.user = sessions[sessionId];
+        const sessionData = sessions[sessionId];
+        // Check if session has expired
+        if (sessionData.expiresAt && sessionData.expiresAt < Date.now()) {
+            delete sessions[sessionId];
+            res.clearCookie('sessionId', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict'
+            });
+            return res.redirect('/');
+        }
+        req.user = sessionData.user;
         return next();
     }
     res.redirect('/');
@@ -171,8 +199,18 @@ app.post('/login', validateInput, async (req, res) => {
             
             if (passwordMatch) {
                 const sessionId = generateSessionId();
-                sessions[sessionId] = user;
-                res.cookie('sessionId', sessionId);
+                // Store session with expiration timestamp
+                sessions[sessionId] = {
+                    user: user,
+                    expiresAt: Date.now() + SESSION_EXPIRY
+                };
+                // Set secure cookie with proper flags
+                res.cookie('sessionId', sessionId, {
+                    httpOnly: true,        // Prevents XSS attacks (JavaScript cannot access)
+                    secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
+                    sameSite: 'strict',    // Prevents CSRF attacks
+                    maxAge: SESSION_EXPIRY // 24 hours expiration
+                });
                 res.redirect('/dashboard');
             } else {
                 res.render('login', { error: 'Invalid credentials' });
@@ -257,6 +295,20 @@ app.get('/search', requireAuth, validateInput, async (req, res) => {
             error: 'System Error: Search operation failed.' 
         });
     }
+});
+
+// Logout route
+app.post('/logout', requireAuth, (req, res) => {
+    const sessionId = req.cookies?.sessionId;
+    if (sessionId && sessions[sessionId]) {
+        delete sessions[sessionId];
+    }
+    res.clearCookie('sessionId', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+    });
+    res.redirect('/');
 });
 
 app.listen(port, '0.0.0.0', () => {
