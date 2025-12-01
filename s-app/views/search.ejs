@@ -41,7 +41,6 @@
                         <th>ID</th>
                         <th>Username</th>
                         <th>Role</th>
-                        <th>Sensitive Note</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -50,12 +49,11 @@
                             <td><%= user.id %></td>
                             <td><%= user.username %></td>
                             <td><%= user.role %></td>
-                            <td><%= user.sensitive_note %></td>
                         </tr>
                     <% }); %>
                 </tbody>
             </table>
-        <% } else if (query) { %>
+        <% } else if (query && query.trim() !== '') { %>
             <div class="empty-state">
                 <p>No users found matching "<%= query %>"</p>
             </div>

@@ -171,9 +171,20 @@ app.get('/dashboard', requireAuth, (req, res) => {
 app.get('/search', requireAuth, validateInput, async (req, res) => {
     const query = req.query.q || '';
     
+    // Only perform search if query is not empty
+    if (!query || query.trim() === '') {
+        return res.render('search', { 
+            user: req.user, 
+            users: [], 
+            query: '', 
+            error: null
+        });
+    }
+    
     try {
         // DEFENSE 2: Parameterized query
-        const sqlQuery = `SELECT * FROM users WHERE username LIKE $1`;
+        // Only select safe fields (exclude password and sensitive_note)
+        const sqlQuery = `SELECT id, username, role FROM users WHERE username LIKE $1`;
         const result = await readonlyPool.query(sqlQuery, [`%${query}%`]);
         
         res.render('search', { 

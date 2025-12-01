@@ -58,6 +58,17 @@ services:
     networks:
       - internal-net
 
+  adminer:
+    image: adminer:latest
+    container_name: sql-injection-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal-net
+
 networks:
   internal-net:
     driver: bridge
