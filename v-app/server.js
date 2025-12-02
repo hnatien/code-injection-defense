@@ -1,8 +1,11 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
-const { Pool } = require('pg');
-const path = require('path');
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import { Pool } from 'pg';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = 3000;
@@ -17,11 +20,12 @@ const pool = new Pool({
 });
 
 // Middleware
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.static('public'));
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // Session storage (in-memory, for demo purposes)
 const sessions = {};
@@ -33,40 +37,31 @@ function generateSessionId() {
 
 // Middleware to check authentication
 function requireAuth(req, res, next) {
-    const sessionId = req.cookies?.sessionId || req.query.sessionId;
+    const sessionId = req.cookies?.sessionId;
     if (sessionId && sessions[sessionId]) {
         req.user = sessions[sessionId];
         return next();
     }
-    res.redirect('/');
+    res.status(401).json({ error: 'Unauthorized' });
 }
 
-// Routes
-app.get('/', (req, res) => {
-    const registered = req.query.registered === 'true';
-    res.render('login', { error: null, registered: registered });
-});
-
-app.get('/register', (req, res) => {
-    res.render('register', { error: null });
-});
-
-app.post('/register', async (req, res) => {
+// API Routes
+app.post('/api/auth/register', async (req, res) => {
     const { username, password, sensitive_note } = req.body;
     
     try {
         // VULNERABLE: String concatenation
         const note = sensitive_note || '';
-        const query = `INSERT INTO users (username, password, sensitive_note) VALUES ('${username}', '${password}', '${note}')`;
+        const query = `INSERT INTO users (username, password, sensitive_note, role) VALUES ('${username}', '${password}', '${note}', 'user')`;
         await pool.query(query);
-        res.redirect('/?registered=true');
+        res.json({ success: true });
     } catch (error) {
         // VULNERABLE: Display full error stack
-        res.render('register', { error: error.stack || error.message });
+        res.status(400).json({ error: error.stack || error.message });
     }
 });
 
-app.post('/login', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
     
     try {
@@ -79,21 +74,30 @@ app.post('/login', async (req, res) => {
             const sessionId = generateSessionId();
             sessions[sessionId] = user;
             res.cookie('sessionId', sessionId);
-            res.redirect('/dashboard');
+            res.json({ success: true, user: { id: user.id, username: user.username } });
         } else {
-            res.render('login', { error: 'Invalid credentials' });
+            res.status(401).json({ error: 'Invalid credentials' });
         }
     } catch (error) {
         // VULNERABLE: Display full error stack
-        res.render('login', { error: error.stack || error.message });
+        res.status(500).json({ error: error.stack || error.message });
     }
 });
 
-app.get('/dashboard', requireAuth, (req, res) => {
-    res.render('dashboard', { user: req.user });
+app.get('/api/auth/me', requireAuth, (req, res) => {
+    res.json({ user: { id: req.user.id, username: req.user.username } });
 });
 
-app.get('/profile', requireAuth, async (req, res) => {
+app.post('/api/auth/logout', requireAuth, (req, res) => {
+    const sessionId = req.cookies?.sessionId;
+    if (sessionId && sessions[sessionId]) {
+        delete sessions[sessionId];
+    }
+    res.clearCookie('sessionId');
+    res.json({ success: true });
+});
+
+app.get('/api/profile', requireAuth, async (req, res) => {
     try {
         // VULNERABLE: String concatenation - but using session user.id for basic security
         const userId = req.user.id;
@@ -101,29 +105,23 @@ app.get('/profile', requireAuth, async (req, res) => {
         const result = await pool.query(sqlQuery);
         
         if (result.rows.length === 0) {
-            return res.render('profile', { 
-                user: req.user, 
-                profile: null,
+            return res.status(404).json({ 
                 error: 'User not found.' 
             });
         }
         
-        res.render('profile', { 
-            user: req.user, 
-            profile: result.rows[0],
-            error: null
+        res.json({ 
+            profile: result.rows[0]
         });
     } catch (error) {
         // VULNERABLE: Display full error stack
-        res.render('profile', { 
-            user: req.user, 
-            profile: null,
+        res.status(500).json({ 
             error: error.stack || error.message 
         });
     }
 });
 
-app.get('/search', requireAuth, async (req, res) => {
+app.get('/api/search', requireAuth, async (req, res) => {
     const query = req.query.q || '';
     
     try {
@@ -131,24 +129,22 @@ app.get('/search', requireAuth, async (req, res) => {
         const sqlQuery = `SELECT * FROM users WHERE username LIKE '%${query}%'`;
         const result = await pool.query(sqlQuery);
         
-        res.render('search', { 
-            user: req.user, 
-            users: result.rows, 
-            query: query,
-            error: null
+        res.json({ 
+            users: result.rows
         });
     } catch (error) {
         // VULNERABLE: Display full error stack
-        res.render('search', { 
-            user: req.user, 
-            users: [], 
-            query: query, 
+        res.status(500).json({ 
             error: error.stack || error.message 
         });
     }
 });
 
+// Serve React app for all other routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
 app.listen(port, '0.0.0.0', () => {
     console.log(`Vulnerable app running on http://localhost:${port}`);
 });
-

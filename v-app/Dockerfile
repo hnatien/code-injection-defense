@@ -2,12 +2,18 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY package.json .
+# Copy package files
+COPY package.json ./
+
+# Install dependencies
 RUN npm install
 
+# Copy source files
 COPY . .
+
+# Build React app
+RUN npm run build
 
 EXPOSE 3000
 
 CMD ["node", "server.js"]
-

@@ -1,11 +1,14 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
-const { Pool } = require('pg');
-const path = require('path');
-const fs = require('fs');
-const bcrypt = require('bcrypt');
-const crypto = require('crypto');
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import { Pool } from 'pg';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = 3001;
@@ -30,11 +33,12 @@ const fullPool = new Pool({
 });
 
 // Middleware
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.static('public'));
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // Session storage (in-memory, for demo purposes)
 // Structure: { sessionId: { user: {...}, expiresAt: timestamp } }
@@ -90,8 +94,8 @@ function validateInput(req, res, next) {
         if (checkValue(value)) {
             // DEFENSE 4: Log suspicious activity
             logSuspiciousActivity(req, key, value);
-            return res.status(400).render('error', { 
-                message: 'System Error: Invalid input detected.' 
+            return res.status(400).json({ 
+                error: 'System Error: Invalid input detected.' 
             });
         }
     }
@@ -124,7 +128,7 @@ function logSuspiciousActivity(req, param, value) {
 
 // Middleware to check authentication
 function requireAuth(req, res, next) {
-    const sessionId = req.cookies?.sessionId || req.query.sessionId;
+    const sessionId = req.cookies?.sessionId;
     if (sessionId && sessions[sessionId]) {
         const sessionData = sessions[sessionId];
         // Check if session has expired
@@ -135,25 +139,16 @@ function requireAuth(req, res, next) {
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'strict'
             });
-            return res.redirect('/');
+            return res.status(401).json({ error: 'Session expired' });
         }
         req.user = sessionData.user;
         return next();
     }
-    res.redirect('/');
+    res.status(401).json({ error: 'Unauthorized' });
 }
 
-// Routes
-app.get('/', (req, res) => {
-    const registered = req.query.registered === 'true';
-    res.render('login', { error: null, registered: registered });
-});
-
-app.get('/register', (req, res) => {
-    res.render('register', { error: null });
-});
-
-app.post('/register', validateInput, async (req, res) => {
+// API Routes
+app.post('/api/auth/register', validateInput, async (req, res) => {
     const { username, password, sensitive_note } = req.body;
     
     try {
@@ -162,17 +157,17 @@ app.post('/register', validateInput, async (req, res) => {
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
         const note = sensitive_note || '';
-        const query = `INSERT INTO users (username, password, sensitive_note) VALUES ($1, $2, $3)`;
-        await fullPool.query(query, [username, hashedPassword, note]);
-        res.redirect('/?registered=true');
+        const query = `INSERT INTO users (username, password, sensitive_note, role) VALUES ($1, $2, $3, $4)`;
+        await fullPool.query(query, [username, hashedPassword, note, 'user']);
+        res.json({ success: true });
     } catch (error) {
         // DEFENSE 3: Generic error message (no stack trace)
         console.error('Registration error:', error);
-        res.render('register', { error: 'System Error: Registration failed.' });
+        res.status(400).json({ error: 'System Error: Registration failed.' });
     }
 });
 
-app.post('/login', validateInput, async (req, res) => {
+app.post('/api/auth/login', validateInput, async (req, res) => {
     const { username, password } = req.body;
     
     try {
@@ -211,94 +206,25 @@ app.post('/login', validateInput, async (req, res) => {
                     sameSite: 'strict',    // Prevents CSRF attacks
                     maxAge: SESSION_EXPIRY // 24 hours expiration
                 });
-                res.redirect('/dashboard');
+                res.json({ success: true, user: { id: user.id, username: user.username } });
             } else {
-                res.render('login', { error: 'Invalid credentials' });
+                res.status(401).json({ error: 'Invalid credentials' });
             }
         } else {
-            res.render('login', { error: 'Invalid credentials' });
+            res.status(401).json({ error: 'Invalid credentials' });
         }
     } catch (error) {
         // DEFENSE 3: Generic error message
         console.error('Login error:', error);
-        res.render('login', { error: 'System Error: Authentication failed.' });
+        res.status(500).json({ error: 'System Error: Authentication failed.' });
     }
 });
 
-app.get('/dashboard', requireAuth, (req, res) => {
-    res.render('dashboard', { user: req.user });
+app.get('/api/auth/me', requireAuth, (req, res) => {
+    res.json({ user: { id: req.user.id, username: req.user.username } });
 });
 
-app.get('/profile', requireAuth, async (req, res) => {
-    try {
-        // DEFENSE 2: Parameterized query
-        // Get user profile including sensitive_note for the currently logged-in user
-        const sqlQuery = `SELECT username, sensitive_note FROM users WHERE id = $1`;
-        const result = await readonlyPool.query(sqlQuery, [req.user.id]);
-        
-        if (result.rows.length === 0) {
-            return res.render('profile', { 
-                user: req.user, 
-                profile: null,
-                error: 'System Error: User not found.' 
-            });
-        }
-        
-        res.render('profile', { 
-            user: req.user, 
-            profile: result.rows[0],
-            error: null
-        });
-    } catch (error) {
-        // DEFENSE 3: Generic error message
-        console.error('Profile error:', error);
-        res.render('profile', { 
-            user: req.user, 
-            profile: null,
-            error: 'System Error: Failed to retrieve profile.' 
-        });
-    }
-});
-
-app.get('/search', requireAuth, validateInput, async (req, res) => {
-    const query = req.query.q || '';
-    
-    // Only perform search if query is not empty
-    if (!query || query.trim() === '') {
-        return res.render('search', { 
-            user: req.user, 
-            users: [], 
-            query: '', 
-            error: null
-        });
-    }
-    
-    try {
-        // DEFENSE 2: Parameterized query
-        // Only select safe fields (exclude password and sensitive_note)
-        const sqlQuery = `SELECT id, username FROM users WHERE username LIKE $1`;
-        const result = await readonlyPool.query(sqlQuery, [`%${query}%`]);
-        
-        res.render('search', { 
-            user: req.user, 
-            users: result.rows, 
-            query: query,
-            error: null
-        });
-    } catch (error) {
-        // DEFENSE 3: Generic error message
-        console.error('Search error:', error);
-        res.render('search', { 
-            user: req.user, 
-            users: [], 
-            query: query, 
-            error: 'System Error: Search operation failed.' 
-        });
-    }
-});
-
-// Logout route
-app.post('/logout', requireAuth, (req, res) => {
+app.post('/api/auth/logout', requireAuth, (req, res) => {
     const sessionId = req.cookies?.sessionId;
     if (sessionId && sessions[sessionId]) {
         delete sessions[sessionId];
@@ -308,10 +234,67 @@ app.post('/logout', requireAuth, (req, res) => {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict'
     });
-    res.redirect('/');
+    res.json({ success: true });
+});
+
+app.get('/api/profile', requireAuth, async (req, res) => {
+    try {
+        // DEFENSE 2: Parameterized query
+        // Get user profile including sensitive_note for the currently logged-in user
+        const sqlQuery = `SELECT username, sensitive_note FROM users WHERE id = $1`;
+        const result = await readonlyPool.query(sqlQuery, [req.user.id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ 
+                error: 'System Error: User not found.' 
+            });
+        }
+        
+        res.json({ 
+            profile: result.rows[0]
+        });
+    } catch (error) {
+        // DEFENSE 3: Generic error message
+        console.error('Profile error:', error);
+        res.status(500).json({ 
+            error: 'System Error: Failed to retrieve profile.' 
+        });
+    }
+});
+
+app.get('/api/search', requireAuth, validateInput, async (req, res) => {
+    const query = req.query.q || '';
+    
+    // Only perform search if query is not empty
+    if (!query || query.trim() === '') {
+        return res.json({ 
+            users: []
+        });
+    }
+    
+    try {
+        // DEFENSE 2: Parameterized query
+        // Only select safe fields (exclude password and sensitive_note)
+        const sqlQuery = `SELECT id, username FROM users WHERE username LIKE $1`;
+        const result = await readonlyPool.query(sqlQuery, [`%${query}%`]);
+        
+        res.json({ 
+            users: result.rows
+        });
+    } catch (error) {
+        // DEFENSE 3: Generic error message
+        console.error('Search error:', error);
+        res.status(500).json({ 
+            error: 'System Error: Search operation failed.' 
+        });
+    }
+});
+
+// Serve React app for all other routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(port, '0.0.0.0', () => {
     console.log(`Secure app running on http://localhost:${port}`);
 });
-
