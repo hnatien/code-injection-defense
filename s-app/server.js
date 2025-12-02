@@ -1,5 +1,7 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { Pool } from 'pg';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -33,9 +35,46 @@ const fullPool = new Pool({
 });
 
 // Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Security headers
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "https:"],
+        },
+    },
+    crossOriginEmbedderPolicy: false, // Allow React to work properly
+}));
+
+// Request size limits to prevent DoS attacks
+// 100kb is reasonable for forms (username, password, sensitive_note) while still preventing large payload attacks
+app.use(express.json({ limit: '100kb' })); // JSON payload limit
+app.use(express.urlencoded({ extended: true, limit: '100kb' })); // URL-encoded payload limit
 app.use(cookieParser());
+
+// Rate limiting - General API rate limit
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: { error: 'Too many requests from this IP, please try again later.' },
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Stricter rate limit for authentication endpoints
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Limit each IP to 5 login/register attempts per windowMs
+    message: { error: 'Too many authentication attempts, please try again after 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true, // Don't count successful requests
+});
+
+// Apply general rate limit to all API routes
+app.use('/api/', generalLimiter);
 
 // Serve static files from React build
 app.use(express.static(path.join(__dirname, 'dist')));
@@ -148,7 +187,8 @@ function requireAuth(req, res, next) {
 }
 
 // API Routes
-app.post('/api/auth/register', validateInput, async (req, res) => {
+// Apply stricter rate limit to authentication endpoints
+app.post('/api/auth/register', authLimiter, validateInput, async (req, res) => {
     const { username, password, sensitive_note } = req.body;
     
     try {
@@ -167,7 +207,7 @@ app.post('/api/auth/register', validateInput, async (req, res) => {
     }
 });
 
-app.post('/api/auth/login', validateInput, async (req, res) => {
+app.post('/api/auth/login', authLimiter, validateInput, async (req, res) => {
     const { username, password } = req.body;
     
     try {
