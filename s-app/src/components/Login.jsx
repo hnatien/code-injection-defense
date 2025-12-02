@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Loading from './Loading';
 
 function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [registered, setRegistered] = useState(false);
-  const { login, user } = useAuth();
+  const { login, user, loading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -19,6 +20,11 @@ function Login() {
       setRegistered(true);
     }
   }, [user, navigate, searchParams]);
+
+  // Show loading while checking authentication
+  if (loading) {
+    return <Loading />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
