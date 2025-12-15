@@ -48,7 +48,7 @@ function requireAuth(req, res, next) {
 // API Routes
 app.post('/api/auth/register', async (req, res) => {
     const { username, password, sensitive_note } = req.body;
-    
+
     try {
         // VULNERABLE: String concatenation
         const note = sensitive_note || '';
@@ -57,18 +57,21 @@ app.post('/api/auth/register', async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         // VULNERABLE: Display full error stack
+        if (error.code === '23505') {
+            return res.status(409).json({ error: 'Username already exists' });
+        }
         res.status(400).json({ error: error.stack || error.message });
     }
 });
 
 app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
-    
+
     try {
         // VULNERABLE: String concatenation - SQL Injection point
         const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
         const result = await pool.query(query);
-        
+
         if (result.rows.length > 0) {
             const user = result.rows[0];
             const sessionId = generateSessionId();
@@ -103,39 +106,39 @@ app.get('/api/profile', requireAuth, async (req, res) => {
         const userId = req.user.id;
         const sqlQuery = `SELECT username, sensitive_note FROM users WHERE id = ${userId}`;
         const result = await pool.query(sqlQuery);
-        
+
         if (result.rows.length === 0) {
-            return res.status(404).json({ 
-                error: 'User not found.' 
+            return res.status(404).json({
+                error: 'User not found.'
             });
         }
-        
-        res.json({ 
+
+        res.json({
             profile: result.rows[0]
         });
     } catch (error) {
         // VULNERABLE: Display full error stack
-        res.status(500).json({ 
-            error: error.stack || error.message 
+        res.status(500).json({
+            error: error.stack || error.message
         });
     }
 });
 
 app.get('/api/search', requireAuth, async (req, res) => {
     const query = req.query.q || '';
-    
+
     try {
         // VULNERABLE: String concatenation - SQL Injection point for UNION attacks
         const sqlQuery = `SELECT * FROM users WHERE username LIKE '%${query}%'`;
         const result = await pool.query(sqlQuery);
-        
-        res.json({ 
+
+        res.json({
             users: result.rows
         });
     } catch (error) {
         // VULNERABLE: Display full error stack
-        res.status(500).json({ 
-            error: error.stack || error.message 
+        res.status(500).json({
+            error: error.stack || error.message
         });
     }
 });

@@ -121,24 +121,24 @@ function validateInput(req, res, next) {
         /drop/gi,       // DROP
         /script/gi      // XSS prevention
     ];
-    
+
     const checkValue = (value) => {
         if (typeof value !== 'string') return false;
         return sqlInjectionPatterns.some(pattern => pattern.test(value));
     };
-    
+
     // Check all body and query parameters
     const allParams = { ...req.body, ...req.query };
     for (const [key, value] of Object.entries(allParams)) {
         if (checkValue(value)) {
             // DEFENSE 4: Log suspicious activity
             logSuspiciousActivity(req, key, value);
-            return res.status(400).json({ 
-                error: 'System Error: Invalid input detected.' 
+            return res.status(400).json({
+                error: 'System Error: Invalid input detected.'
             });
         }
     }
-    
+
     next();
 }
 
@@ -147,16 +147,16 @@ function logSuspiciousActivity(req, param, value) {
     const timestamp = new Date().toISOString();
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const logEntry = `[ALERT] ${timestamp} - Suspicious input detected\n` +
-                     `  IP: ${ip}\n` +
-                     `  Parameter: ${param}\n` +
-                     `  Value: ${value}\n` +
-                     `  Path: ${req.path}\n` +
-                     `  Method: ${req.method}\n` +
-                     `---\n`;
-    
+        `  IP: ${ip}\n` +
+        `  Parameter: ${param}\n` +
+        `  Value: ${value}\n` +
+        `  Path: ${req.path}\n` +
+        `  Method: ${req.method}\n` +
+        `---\n`;
+
     // Log to console
     console.error(logEntry);
-    
+
     // Log to file (optional, for production)
     try {
         fs.appendFileSync('security.log', logEntry);
@@ -190,7 +190,7 @@ function requireAuth(req, res, next) {
 // Apply stricter rate limit to authentication endpoints
 app.post('/api/auth/register', authLimiter, validateInput, async (req, res) => {
     const { username, password, sensitive_note } = req.body;
-    
+
     try {
         // DEFENSE 2: Parameterized query
         // DEFENSE 7: Password hashing with bcrypt
@@ -203,23 +203,29 @@ app.post('/api/auth/register', authLimiter, validateInput, async (req, res) => {
     } catch (error) {
         // DEFENSE 3: Generic error message (no stack trace)
         console.error('Registration error:', error);
+
+        // Handle unique constraint violation (duplicate username)
+        if (error.code === '23505') { // Postgres error code for unique_violation
+            return res.status(409).json({ error: 'Username already exists' });
+        }
+
         res.status(400).json({ error: 'System Error: Registration failed.' });
     }
 });
 
 app.post('/api/auth/login', authLimiter, validateInput, async (req, res) => {
     const { username, password } = req.body;
-    
+
     try {
         // DEFENSE 2: Parameterized query
         // DEFENSE 7: Password verification with bcrypt
         const query = `SELECT * FROM users WHERE username = $1`;
         const result = await readonlyPool.query(query, [username]);
-        
+
         if (result.rows.length > 0) {
             const user = result.rows[0];
             let passwordMatch = false;
-            
+
             // Check if password is hashed (starts with bcrypt hash prefix)
             // This allows backward compatibility with users registered in v-app (plain text)
             // but ensures users registered in s-app are protected (hashed)
@@ -231,7 +237,7 @@ app.post('/api/auth/login', authLimiter, validateInput, async (req, res) => {
                 // Note: This is for demo purposes to show the difference
                 passwordMatch = (user.password === password);
             }
-            
+
             if (passwordMatch) {
                 const sessionId = generateSessionId();
                 // Store session with expiration timestamp
@@ -283,49 +289,49 @@ app.get('/api/profile', requireAuth, async (req, res) => {
         // Get user profile including sensitive_note for the currently logged-in user
         const sqlQuery = `SELECT username, sensitive_note FROM users WHERE id = $1`;
         const result = await readonlyPool.query(sqlQuery, [req.user.id]);
-        
+
         if (result.rows.length === 0) {
-            return res.status(404).json({ 
-                error: 'System Error: User not found.' 
+            return res.status(404).json({
+                error: 'System Error: User not found.'
             });
         }
-        
-        res.json({ 
+
+        res.json({
             profile: result.rows[0]
         });
     } catch (error) {
         // DEFENSE 3: Generic error message
         console.error('Profile error:', error);
-        res.status(500).json({ 
-            error: 'System Error: Failed to retrieve profile.' 
+        res.status(500).json({
+            error: 'System Error: Failed to retrieve profile.'
         });
     }
 });
 
 app.get('/api/search', requireAuth, validateInput, async (req, res) => {
     const query = req.query.q || '';
-    
+
     // Only perform search if query is not empty
     if (!query || query.trim() === '') {
-        return res.json({ 
+        return res.json({
             users: []
         });
     }
-    
+
     try {
         // DEFENSE 2: Parameterized query
         // Only select safe fields (exclude password and sensitive_note)
         const sqlQuery = `SELECT id, username FROM users WHERE username LIKE $1`;
         const result = await readonlyPool.query(sqlQuery, [`%${query}%`]);
-        
-        res.json({ 
+
+        res.json({
             users: result.rows
         });
     } catch (error) {
         // DEFENSE 3: Generic error message
         console.error('Search error:', error);
-        res.status(500).json({ 
-            error: 'System Error: Search operation failed.' 
+        res.status(500).json({
+            error: 'System Error: Search operation failed.'
         });
     }
 });
