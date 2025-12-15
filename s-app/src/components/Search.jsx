@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
-import { LayoutDashboard, Search as SearchIcon, User, LogOut, ShieldCheck, Database, Terminal, CheckCircle, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Search as SearchIcon, User, LogOut, ShieldCheck, Database, Terminal, CheckCircle, ArrowLeft, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
@@ -57,13 +57,11 @@ function Search() {
     navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
   };
 
-  // Secure SQL Visualization
   const sqlStatement = `SELECT * FROM users WHERE username LIKE $1`;
   const paramBinding = `$1 = '%${searchQuery}%'`;
 
   return (
     <div className="min-h-screen bg-secure-black text-secure-light font-sans flex text-sm">
-      {/* Sidebar (Simplified) */}
       <aside className="w-16 lg:w-64 bg-secure-dark border-r border-slate-800 flex flex-col shrink-0">
         <div className="p-4 lg:p-6 border-b border-slate-800 flex items-center justify-center lg:justify-start gap-3">
           <ShieldCheck className="w-8 h-8 text-secure-primary" />
@@ -82,7 +80,6 @@ function Search() {
         </nav>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-y-auto relative flex flex-col h-screen">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-secure-primary via-blue-500 to-indigo-500"></div>
 
@@ -96,7 +93,6 @@ function Search() {
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {/* Search Box */}
             <div className="space-y-4">
               <form onSubmit={handleSearch} className="relative group" autoComplete="off">
                 <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-secure-primary transition-colors" />
@@ -129,7 +125,6 @@ function Search() {
               </div>
             </div>
 
-            {/* Secure Query Visualizer */}
             <div className="bg-black border border-slate-700 rounded-xl p-4 font-mono text-sm relative overflow-hidden shadow-xl">
 
               <div className="text-xs text-slate-500 mb-2 border-b border-slate-700 pb-2 flex justify-between">
@@ -153,7 +148,6 @@ function Search() {
             </div>
           </div>
 
-          {/* Results Table */}
           <div className="bg-gray-900/90 border border-slate-800 rounded-xl overflow-hidden flex-1 flex flex-col shadow-lg">
             <div className="p-4 border-b border-slate-800 bg-black/20 flex justify-between items-center">
               <h3 className="font-semibold text-white">Results</h3>

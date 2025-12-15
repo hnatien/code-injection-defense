@@ -15,8 +15,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = 3001;
 
-// Database connection pools
-// Read-only pool for SELECT operations (PoLP)
+// Principle of Least Privilege: Separate pools for different operations
 const readonlyPool = new Pool({
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
@@ -25,7 +24,6 @@ const readonlyPool = new Pool({
     password: process.env.DB_PASSWORD || 'readonly_pass'
 });
 
-// Full access pool for INSERT operations (registration)
 const fullPool = new Pool({
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
@@ -34,8 +32,6 @@ const fullPool = new Pool({
     password: process.env.DB_PASSWORD_FULL || 'full_pass'
 });
 
-// Middleware
-// Security headers
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -45,48 +41,37 @@ app.use(helmet({
             imgSrc: ["'self'", "data:", "https:"],
         },
     },
-    crossOriginEmbedderPolicy: false, // Allow React to work properly
+    crossOriginEmbedderPolicy: false,
 }));
 
-// Request size limits to prevent DoS attacks
-// 100kb is reasonable for forms (username, password, sensitive_note) while still preventing large payload attacks
-app.use(express.json({ limit: '100kb' })); // JSON payload limit
-app.use(express.urlencoded({ extended: true, limit: '100kb' })); // URL-encoded payload limit
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 app.use(cookieParser());
 
-// Rate limiting - General API rate limit
 const generalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: { error: 'Too many requests from this IP, please try again later.' },
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: 'Too many requests, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 
-// Stricter rate limit for authentication endpoints
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // Limit each IP to 5 login/register attempts per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 5,
     message: { error: 'Too many authentication attempts, please try again after 15 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
-    skipSuccessfulRequests: true, // Don't count successful requests
+    skipSuccessfulRequests: true,
 });
 
-// Apply general rate limit to all API routes
 app.use('/api/', generalLimiter);
-
-// Serve static files from React build
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Session storage (in-memory, for demo purposes)
-// Structure: { sessionId: { user: {...}, expiresAt: timestamp } }
 const sessions = {};
-
-// Session expiration time (24 hours in milliseconds)
 const SESSION_EXPIRY = 24 * 60 * 60 * 1000;
 
-// Cleanup expired sessions periodically
+// Cleanup expired sessions hourly
 setInterval(() => {
     const now = Date.now();
     for (const [sessionId, sessionData] of Object.entries(sessions)) {
@@ -94,83 +79,57 @@ setInterval(() => {
             delete sessions[sessionId];
         }
     }
-}, 60 * 60 * 1000); // Run cleanup every hour
+}, 60 * 60 * 1000);
 
-// Helper function to generate secure session ID using crypto
 function generateSessionId() {
-    // Generate 32 random bytes and convert to hex string (64 characters)
-    // This is cryptographically secure and unpredictable
     return crypto.randomBytes(32).toString('hex');
 }
 
-// DEFENSE 1: Input Validation Middleware
 function validateInput(req, res, next) {
-    const sqlInjectionPatterns = [
-        /'/g,           // Single quote
-        /--/g,          // SQL comment
-        /;/g,           // Statement terminator
-        /\/\*/g,        // Multi-line comment start
-        /\*\//g,        // Multi-line comment end
-        /xp_/gi,        // Extended stored procedures
-        /exec/gi,       // EXEC command
-        /union/gi,       // UNION attack
-        /select/gi,     // SELECT (for some contexts)
-        /insert/gi,     // INSERT
-        /update/gi,     // UPDATE
-        /delete/gi,     // DELETE
-        /drop/gi,       // DROP
-        /script/gi      // XSS prevention
-    ];
+    const { username, password, sensitive_note } = req.body;
+    const { q } = req.query;
 
-    const checkValue = (value) => {
-        if (typeof value !== 'string') return false;
-        return sqlInjectionPatterns.some(pattern => pattern.test(value));
-    };
+    if (username !== undefined) {
+        const usernameRegex = /^[a-zA-Z0-9_-]{3,30}$/;
+        if (!usernameRegex.test(username)) {
+            logSuspiciousActivity(req, 'username', username);
+            return res.status(400).json({ error: 'Invalid username format.' });
+        }
+    }
 
-    // Check all body and query parameters
-    const allParams = { ...req.body, ...req.query };
-    for (const [key, value] of Object.entries(allParams)) {
-        if (checkValue(value)) {
-            // DEFENSE 4: Log suspicious activity
-            logSuspiciousActivity(req, key, value);
-            return res.status(400).json({
-                error: 'System Error: Invalid input detected.'
-            });
+    if (password !== undefined) {
+        if (typeof password !== 'string' || password.length < 6 || password.length > 100) {
+            return res.status(400).json({ error: 'Password must be 6-100 characters.' });
+        }
+    }
+
+    if (sensitive_note !== undefined) {
+        if (typeof sensitive_note !== 'string' || sensitive_note.length > 500) {
+            return res.status(400).json({ error: 'Note exceeds 500 characters.' });
+        }
+    }
+
+    if (q !== undefined) {
+        if (typeof q !== 'string' || q.length > 100) {
+            return res.status(400).json({ error: 'Search query too long.' });
         }
     }
 
     next();
 }
 
-// DEFENSE 4: Logging suspicious queries
 function logSuspiciousActivity(req, param, value) {
-    const timestamp = new Date().toISOString();
-    const ip = req.ip || req.connection.remoteAddress || 'unknown';
-    const logEntry = `[ALERT] ${timestamp} - Suspicious input detected\n` +
-        `  IP: ${ip}\n` +
-        `  Parameter: ${param}\n` +
-        `  Value: ${value}\n` +
-        `  Path: ${req.path}\n` +
-        `  Method: ${req.method}\n` +
-        `---\n`;
-
-    // Log to console
+    const logEntry = `[ALERT] ${new Date().toISOString()} - Suspicious input\n  IP: ${req.ip}\n  Param: ${param}\n  Value: ${value}\n---\n`;
     console.error(logEntry);
-
-    // Log to file (optional, for production)
     try {
         fs.appendFileSync('security.log', logEntry);
-    } catch (err) {
-        // Ignore file write errors in demo
-    }
+    } catch (err) { /* ignore */ }
 }
 
-// Middleware to check authentication
 function requireAuth(req, res, next) {
     const sessionId = req.cookies?.sessionId;
     if (sessionId && sessions[sessionId]) {
         const sessionData = sessions[sessionId];
-        // Check if session has expired
         if (sessionData.expiresAt && sessionData.expiresAt < Date.now()) {
             delete sessions[sessionId];
             res.clearCookie('sessionId', {
@@ -186,30 +145,20 @@ function requireAuth(req, res, next) {
     res.status(401).json({ error: 'Unauthorized' });
 }
 
-// API Routes
-// Apply stricter rate limit to authentication endpoints
 app.post('/api/auth/register', authLimiter, validateInput, async (req, res) => {
     const { username, password, sensitive_note } = req.body;
 
     try {
-        // DEFENSE 2: Parameterized query
-        // DEFENSE 7: Password hashing with bcrypt
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-        const note = sensitive_note || '';
+        const hashedPassword = await bcrypt.hash(password, 10);
         const query = `INSERT INTO users (username, password, sensitive_note, role) VALUES ($1, $2, $3, $4)`;
-        await fullPool.query(query, [username, hashedPassword, note, 'user']);
+        await fullPool.query(query, [username, hashedPassword, sensitive_note || '', 'user']);
         res.json({ success: true });
     } catch (error) {
-        // DEFENSE 3: Generic error message (no stack trace)
         console.error('Registration error:', error);
-
-        // Handle unique constraint violation (duplicate username)
-        if (error.code === '23505') { // Postgres error code for unique_violation
+        if (error.code === '23505') {
             return res.status(409).json({ error: 'Username already exists' });
         }
-
-        res.status(400).json({ error: 'System Error: Registration failed.' });
+        res.status(400).json({ error: 'Registration failed.' });
     }
 });
 
@@ -217,8 +166,6 @@ app.post('/api/auth/login', authLimiter, validateInput, async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        // DEFENSE 2: Parameterized query
-        // DEFENSE 7: Password verification with bcrypt
         const query = `SELECT * FROM users WHERE username = $1`;
         const result = await readonlyPool.query(query, [username]);
 
@@ -226,31 +173,24 @@ app.post('/api/auth/login', authLimiter, validateInput, async (req, res) => {
             const user = result.rows[0];
             let passwordMatch = false;
 
-            // Check if password is hashed (starts with bcrypt hash prefix)
-            // This allows backward compatibility with users registered in v-app (plain text)
-            // but ensures users registered in s-app are protected (hashed)
-            if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$') || user.password.startsWith('$2y$')) {
-                // Password is hashed (registered in s-app) - use bcrypt
+            // Support both legacy (plain) and secure (hashed) passwords for demo compatibility
+            if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
                 passwordMatch = await bcrypt.compare(password, user.password);
             } else {
-                // Password is plain text (registered in v-app) - direct comparison
-                // Note: This is for demo purposes to show the difference
                 passwordMatch = (user.password === password);
             }
 
             if (passwordMatch) {
                 const sessionId = generateSessionId();
-                // Store session with expiration timestamp
                 sessions[sessionId] = {
                     user: user,
                     expiresAt: Date.now() + SESSION_EXPIRY
                 };
-                // Set secure cookie with proper flags
                 res.cookie('sessionId', sessionId, {
-                    httpOnly: true,        // Prevents XSS attacks (JavaScript cannot access)
-                    secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
-                    sameSite: 'strict',    // Prevents CSRF attacks
-                    maxAge: SESSION_EXPIRY // 24 hours expiration
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'strict',
+                    maxAge: SESSION_EXPIRY
                 });
                 res.json({ success: true, user: { id: user.id, username: user.username } });
             } else {
@@ -260,9 +200,8 @@ app.post('/api/auth/login', authLimiter, validateInput, async (req, res) => {
             res.status(401).json({ error: 'Invalid credentials' });
         }
     } catch (error) {
-        // DEFENSE 3: Generic error message
         console.error('Login error:', error);
-        res.status(500).json({ error: 'System Error: Authentication failed.' });
+        res.status(500).json({ error: 'Authentication failed.' });
     }
 });
 
@@ -272,9 +211,8 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
 
 app.post('/api/auth/logout', requireAuth, (req, res) => {
     const sessionId = req.cookies?.sessionId;
-    if (sessionId && sessions[sessionId]) {
-        delete sessions[sessionId];
-    }
+    if (sessionId && sessions[sessionId]) delete sessions[sessionId];
+
     res.clearCookie('sessionId', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -285,58 +223,41 @@ app.post('/api/auth/logout', requireAuth, (req, res) => {
 
 app.get('/api/profile', requireAuth, async (req, res) => {
     try {
-        // DEFENSE 2: Parameterized query
-        // Get user profile including sensitive_note for the currently logged-in user
         const sqlQuery = `SELECT username, sensitive_note FROM users WHERE id = $1`;
         const result = await readonlyPool.query(sqlQuery, [req.user.id]);
 
         if (result.rows.length === 0) {
-            return res.status(404).json({
-                error: 'System Error: User not found.'
-            });
+            return res.status(404).json({ error: 'User not found.' });
         }
 
-        res.json({
-            profile: result.rows[0]
-        });
+        res.json({ profile: result.rows[0] });
     } catch (error) {
-        // DEFENSE 3: Generic error message
         console.error('Profile error:', error);
-        res.status(500).json({
-            error: 'System Error: Failed to retrieve profile.'
-        });
+        res.status(500).json({ error: 'Failed to retrieve profile.' });
     }
 });
 
 app.get('/api/search', requireAuth, validateInput, async (req, res) => {
     const query = req.query.q || '';
 
-    // Only perform search if query is not empty
     if (!query || query.trim() === '') {
-        return res.json({
-            users: []
-        });
+        return res.json({ users: [] });
     }
 
     try {
-        // DEFENSE 2: Parameterized query
-        // Only select safe fields (exclude password and sensitive_note)
-        const sqlQuery = `SELECT id, username FROM users WHERE username LIKE $1`;
-        const result = await readonlyPool.query(sqlQuery, [`%${query}%`]);
+        // Escape wildcards to ensure literal search behavior
+        const escapedQuery = query.replace(/[%_]/g, '\\$&');
 
-        res.json({
-            users: result.rows
-        });
+        const sqlQuery = `SELECT id, username FROM users WHERE username LIKE $1 LIMIT 50`;
+        const result = await readonlyPool.query(sqlQuery, [`%${escapedQuery}%`]);
+
+        res.json({ users: result.rows });
     } catch (error) {
-        // DEFENSE 3: Generic error message
         console.error('Search error:', error);
-        res.status(500).json({
-            error: 'System Error: Search operation failed.'
-        });
+        res.status(500).json({ error: 'Search operation failed.' });
     }
 });
 
-// Serve React app for all other routes
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
