@@ -129,9 +129,7 @@ function Search() {
 
             {/* Secure Query Visualizer */}
             <div className="bg-black border border-slate-700 rounded-xl p-4 font-mono text-sm relative overflow-hidden shadow-xl">
-              <div className="absolute top-0 right-0 p-2 opacity-30">
-                <Database size={40} />
-              </div>
+
               <div className="text-xs text-slate-500 mb-2 border-b border-slate-700 pb-2 flex justify-between">
                 <span>PARAMETERIZED QUERY MONITOR</span>
                 <span className="text-green-500 flex items-center gap-1"><CheckCircle size={10} /> SECURE</span>

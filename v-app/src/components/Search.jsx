@@ -129,9 +129,7 @@ function Search() {
 
             {/* Live SQL Monitor */}
             <div className="bg-black border border-gray-800 rounded-xl p-4 font-mono text-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-2 opacity-30">
-                <Terminal size={40} />
-              </div>
+
               <div className="text-xs text-gray-500 mb-2 border-b border-gray-800 pb-2 flex justify-between">
                 <span>BACKEND QUERY MONITOR</span>
                 <span className="text-green-500">LIVE</span>
