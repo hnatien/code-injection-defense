@@ -14,7 +14,6 @@
 
 - [Overview](#-overview)
 - [Key Features](#-key-features)
-- [Screenshots](#-screenshots)
 - [Quick Start](#-quick-start)
 - [The Lab: How to Test](#-the-lab-how-to-test)
     - [🔴 The Vulnerable App](#-the-vulnerable-app-port-3000)
@@ -48,13 +47,7 @@ By comparing them, you can clearly see *how* attacks work and *why* defenses suc
 
 ---
 
-## 📸 Screenshots
 
-*(Add screenshots here demonstrating the UI comparison or an attack in action)*
-
-> *Note: While screens are being added, proceed to Quick Start to see it live!*
-
----
 
 ## 🚀 Quick Start
 
