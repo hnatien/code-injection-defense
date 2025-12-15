@@ -98,10 +98,12 @@ function Search() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             {/* Search Box */}
             <div className="space-y-4">
-              <form onSubmit={handleSearch} className="relative group">
+              <form onSubmit={handleSearch} className="relative group" autoComplete="off">
                 <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-secure-primary transition-colors" />
                 <input
                   type="text"
+                  name="search-query-secure"
+                  autoComplete="off"
                   className="w-full bg-secure-dark border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder-slate-600 focus:ring-2 focus:ring-secure-primary/50 focus:border-secure-primary outline-none transition-all shadow-lg"
                   placeholder="Enter username (try injected code like ' OR '1'='1)"
                   value={searchQuery}
@@ -152,7 +154,7 @@ function Search() {
           </div>
 
           {/* Results Table */}
-          <div className="bg-secure-dark border border-slate-800 rounded-xl overflow-hidden flex-1 flex flex-col shadow-lg">
+          <div className="bg-gray-900/90 border border-slate-800 rounded-xl overflow-hidden flex-1 flex flex-col shadow-lg">
             <div className="p-4 border-b border-slate-800 bg-black/20 flex justify-between items-center">
               <h3 className="font-semibold text-white">Results</h3>
               <span className="text-xs text-slate-500">{users.length} matches</span>

@@ -5,11 +5,17 @@
 :root {
     background-color: #0f172a;
     color: #f8fafc;
+    color-scheme: dark;
+}
+
+html {
+    background-color: #0f172a;
 }
 
 body {
     margin: 0;
     min-height: 100vh;
+    overscroll-behavior: none;
 }
 
 /* Secure Theme Utilities */
@@ -38,4 +44,27 @@ body {
 
 .animate-shield {
     animation: shield-pulse 2s infinite;
+}
+
+/* Custom Scrollbar for Secure Theme */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    /* For horizontal scrollbars */
+}
+
+::-webkit-scrollbar-track {
+    background: #0f172a;
+    /* secure-black */
+}
+
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    /* slate-700 */
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+    /* slate-600 */
 }
