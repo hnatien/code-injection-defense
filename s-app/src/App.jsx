@@ -5,18 +5,19 @@ import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import Profile from './components/Profile';
 import Search from './components/Search';
+import SQLiTest from './components/SQLiTest';
 import Loading from './components/Loading';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
-  
+
   // Wait for auth check to complete before redirecting
   // This prevents flash of login page on reload
   if (loading) {
     return <Loading />;
   }
-  
+
   return user ? children : <Navigate to="/" replace />;
 }
 
@@ -46,6 +47,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Search />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sqli-test"
+        element={
+          <ProtectedRoute>
+            <SQLiTest />
           </ProtectedRoute>
         }
       />

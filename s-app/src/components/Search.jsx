@@ -74,6 +74,9 @@ function Search() {
           <Link to="/search" className="flex items-center gap-3 px-3 py-3 rounded-lg bg-secure-primary/10 text-secure-primary border border-secure-primary/20 justify-center lg:justify-start">
             <SearchIcon size={20} /> <span className="hidden lg:block">Secure Search</span>
           </Link>
+          <Link to="/sqli-test" className="flex items-center gap-3 px-3 py-3 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 justify-center lg:justify-start">
+            <Database size={20} /> <span className="hidden lg:block">SQLi Test</span>
+          </Link>
           <Link to="/profile" className="flex items-center gap-3 px-3 py-3 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 justify-center lg:justify-start">
             <User size={20} /> <span className="hidden lg:block">My Profile</span>
           </Link>

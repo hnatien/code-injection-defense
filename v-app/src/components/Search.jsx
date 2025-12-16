@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
-import { LayoutDashboard, Search as SearchIcon, User, LogOut, Shield, Terminal, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Search as SearchIcon, User, LogOut, Shield, Terminal, AlertTriangle, ArrowLeft, Database } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 function Search() {
@@ -78,6 +78,9 @@ function Search() {
           </Link>
           <Link to="/search" className="flex items-center gap-3 px-3 py-3 rounded-lg bg-cyber-primary/10 text-cyber-primary border border-cyber-primary/20 justify-center lg:justify-start">
             <SearchIcon size={20} /> <span className="hidden lg:block">Search Users</span>
+          </Link>
+          <Link to="/sqli-test" className="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 justify-center lg:justify-start">
+            <Database size={20} /> <span className="hidden lg:block">SQLi Test</span>
           </Link>
           <Link to="/profile" className="flex items-center gap-3 px-3 py-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 justify-center lg:justify-start">
             <User size={20} /> <span className="hidden lg:block">My Profile</span>

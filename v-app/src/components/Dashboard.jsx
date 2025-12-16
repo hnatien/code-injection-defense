@@ -16,6 +16,7 @@ function Dashboard() {
   const navItems = [
     { icon: LayoutDashboard, label: 'Overview', active: true },
     { icon: Search, label: 'Search Users', path: '/search' },
+    { icon: Database, label: 'SQLi Test', path: '/sqli-test' },
     { icon: User, label: 'My Profile', path: '/profile' },
   ];
 
@@ -34,8 +35,8 @@ function Dashboard() {
               key={idx}
               to={item.path || '#'}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${item.active
-                  ? 'bg-cyber-primary/10 text-cyber-primary border border-cyber-primary/20 shadow-[0_0_10px_rgba(0,255,65,0.1)]'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                ? 'bg-cyber-primary/10 text-cyber-primary border border-cyber-primary/20 shadow-[0_0_10px_rgba(0,255,65,0.1)]'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
             >
               <item.icon size={20} />
