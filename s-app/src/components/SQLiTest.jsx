@@ -46,6 +46,18 @@ function SQLiTest() {
             description: "Attempts to drop tables. Parameterized queries treat this as a string.",
             code: "'; DROP TABLE users; --",
             context: "Input Fields"
+        },
+        {
+            title: "Boolean-Based Blind",
+            description: "Attempts boolean inference. Secure app treats this as a literal.",
+            code: "' AND (SELECT 1)=1 --",
+            context: "Any Input"
+        },
+        {
+            title: "Time-Based Blind",
+            description: "Attempts to sleep DB. Secure app won't execute function calls.",
+            code: "'; SELECT pg_sleep(5); --",
+            context: "Any Input"
         }
     ];
 
