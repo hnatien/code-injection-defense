@@ -1,29 +1,12 @@
-const API_BASE = '';
-
 export const api = {
-  async get(url, options = {}) {
-    return fetch(API_BASE + url, {
-      ...options,
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
+  get: async (url) => {
+    return fetch(url);
   },
-
-  async post(url, data, options = {}) {
-    return fetch(API_BASE + url, {
-      ...options,
+  post: async (url, data) => {
+    return fetch(url, {
       method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
   },
 };
-

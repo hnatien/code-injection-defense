@@ -1,68 +1,23 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './components/Login';
-import Register from './components/Register';
-import Dashboard from './components/Dashboard';
-import Profile from './components/Profile';
-import Search from './components/Search';
-import SQLiTest from './components/SQLiTest';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
-function ProtectedRoute({ children }) {
-  const { user } = useAuth();
-  return user ? children : <Navigate to="/" replace />;
-}
-
-function AppRoutes() {
+function Home() {
   return (
-    <Routes>
-      <Route path="/" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/search"
-        element={
-          <ProtectedRoute>
-            <Search />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/sqli-test"
-        element={
-          <ProtectedRoute>
-            <SQLiTest />
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+    <div style={{ padding: '2rem', textAlign: 'center', color: 'red' }}>
+      <h1>Vulnerable Project Skeleton</h1>
+      <p>This is the baseline for the vulnerable application.</p>
+    </div>
   );
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+      </Routes>
+    </Router>
   );
 }
 
 export default App;
-
